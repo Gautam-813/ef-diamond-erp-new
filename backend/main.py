@@ -13,9 +13,13 @@ import pandas as pd
 from typing import List, Dict, Any
 import os
 import shutil
+from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Cloudinary Configuration
 cloudinary.config(
@@ -326,13 +330,11 @@ async def sync_prices_from_excel(
 
 @app.delete("/media/{media_id}")
 def delete_media(media_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    media = db.query(models.Media).join(models.Parcel).join(models.Tender).filter(
-        models.Media.id == media_id,
-        models.Tender.owner_id == current_user.id
-    ).first()
+    # Everyone is allowed to delete media
+    media = db.query(models.Media).filter(models.Media.id == media_id).first()
     
     if not media:
-        raise HTTPException(status_code=404, detail="Media not found or unauthorized")
+        raise HTTPException(status_code=404, detail="Media not found")
     
     # Delete from Cloudinary if it's a cloud URL
     if "cloudinary.com" in media.file_path:
@@ -415,7 +417,11 @@ def create_tender(tender: schemas.TenderCreate, db: Session = Depends(get_db), c
 
 @app.delete("/tenders/{tender_id}")
 def delete_tender(tender_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    tender = db.query(models.Tender).filter(models.Tender.id == tender_id, models.Tender.owner_id == current_user.id).first()
+    if current_user.role == "admin":
+        tender = db.query(models.Tender).filter(models.Tender.id == tender_id).first()
+    else:
+        tender = db.query(models.Tender).filter(models.Tender.id == tender_id, models.Tender.owner_id == current_user.id).first()
+    
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found or unauthorized")
     db.delete(tender)
@@ -424,7 +430,11 @@ def delete_tender(tender_id: int, db: Session = Depends(get_db), current_user: m
 
 @app.put("/tenders/{tender_id}", response_model=schemas.TenderOut)
 def update_tender(tender_id: int, tender_data: Dict[str, Any], db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    tender = db.query(models.Tender).filter(models.Tender.id == tender_id, models.Tender.owner_id == current_user.id).first()
+    if current_user.role == "admin":
+        tender = db.query(models.Tender).filter(models.Tender.id == tender_id).first()
+    else:
+        tender = db.query(models.Tender).filter(models.Tender.id == tender_id, models.Tender.owner_id == current_user.id).first()
+    
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found or unauthorized")
     
@@ -442,7 +452,11 @@ def update_tender(tender_id: int, tender_data: Dict[str, Any], db: Session = Dep
 
 @app.post("/tenders/{tender_id}/parcels", response_model=schemas.ParcelOut)
 def create_parcel(tender_id: int, parcel: schemas.ParcelCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    tender = db.query(models.Tender).filter(models.Tender.id == tender_id, models.Tender.owner_id == current_user.id).first()
+    if current_user.role == "admin":
+        tender = db.query(models.Tender).filter(models.Tender.id == tender_id).first()
+    else:
+        tender = db.query(models.Tender).filter(models.Tender.id == tender_id, models.Tender.owner_id == current_user.id).first()
+    
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found or unauthorized")
     
@@ -454,10 +468,13 @@ def create_parcel(tender_id: int, parcel: schemas.ParcelCreate, db: Session = De
 
 @app.put("/parcels/{parcel_id}", response_model=schemas.ParcelOut)
 def update_parcel(parcel_id: int, parcel_data: Dict[str, Any], db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    parcel = db.query(models.Parcel).join(models.Tender).filter(
-        models.Parcel.id == parcel_id, 
-        models.Tender.owner_id == current_user.id
-    ).first()
+    if current_user.role == "admin":
+        parcel = db.query(models.Parcel).filter(models.Parcel.id == parcel_id).first()
+    else:
+        parcel = db.query(models.Parcel).join(models.Tender).filter(
+            models.Parcel.id == parcel_id, 
+            models.Tender.owner_id == current_user.id
+        ).first()
     
     if not parcel:
         raise HTTPException(status_code=404, detail="Parcel not found or unauthorized")
@@ -474,10 +491,13 @@ def update_parcel(parcel_id: int, parcel_data: Dict[str, Any], db: Session = Dep
 
 @app.delete("/parcels/{parcel_id}")
 def delete_parcel(parcel_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    parcel = db.query(models.Parcel).join(models.Tender).filter(
-        models.Parcel.id == parcel_id, 
-        models.Tender.owner_id == current_user.id
-    ).first()
+    if current_user.role == "admin":
+        parcel = db.query(models.Parcel).filter(models.Parcel.id == parcel_id).first()
+    else:
+        parcel = db.query(models.Parcel).join(models.Tender).filter(
+            models.Parcel.id == parcel_id, 
+            models.Tender.owner_id == current_user.id
+        ).first()
     
     if not parcel:
         raise HTTPException(status_code=404, detail="Parcel not found or unauthorized")
@@ -498,13 +518,11 @@ async def upload_media(
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    parcel = db.query(models.Parcel).join(models.Tender).filter(
-        models.Parcel.id == parcel_id, 
-        models.Tender.owner_id == current_user.id
-    ).first()
+    # Everyone is allowed to upload media to any parcel
+    parcel = db.query(models.Parcel).filter(models.Parcel.id == parcel_id).first()
     
     if not parcel:
-        raise HTTPException(status_code=404, detail="Parcel not found or unauthorized")
+        raise HTTPException(status_code=404, detail="Parcel not found")
     
     try:
         file_ext = file.filename.split(".")[-1]
