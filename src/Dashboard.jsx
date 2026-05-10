@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import html2pdf from 'html2pdf.js/dist/html2pdf.min.js';
 import { useUser } from './context/UserContext';
 import { api } from './services/api';
 import NumericInput from './components/NumericInput';
@@ -389,9 +390,8 @@ export default function Dashboard() {
                                  html2canvas: { scale: 2, useCORS: true },
                                  jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
                               };
-                              import('html2pdf.js').then(html2pdf => {
-                                 html2pdf.default().set(opt).from(element).save();
-                              });
+                              const h2p = window.html2pdf || html2pdf;
+                              (h2p.default || h2p)().set(opt).from(element).save();
                            }}>📄 Download PDF</button>
                         </div>
                         <TenderSummaryReport tender={activeTender} parcels={activeTender.parcels} prices={globalPrices} />
@@ -1753,9 +1753,8 @@ function CalculationView({ tender, parcel, onBack, onUpdate, globalPrices, onUpd
                               html2canvas: { scale: 2, useCORS: true },
                               jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
                            };
-                           import('html2pdf.js').then(html2pdf => {
-                              html2pdf.default().set(opt).from(element).save();
-                           });
+                           const h2p = window.html2pdf || html2pdf;
+                           (h2p.default || h2p)().set(opt).from(element).save();
                         }}>📄 Download PDF</button>
                      </div>
 <ParcelSummaryReport

@@ -1,4 +1,5 @@
 import React from 'react';
+import html2pdf from 'html2pdf.js/dist/html2pdf.min.js';
 import { formatNum } from '../utils/calculations';
 import { getPriceIdxFromRange } from '../utils/priceUtils';
 import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES } from '../constants/diamondData';
@@ -16,9 +17,8 @@ const TenderSummaryReport = ({ tender, parcels, prices }) => {
       jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
     };
 
-    import('html2pdf.js').then(html2pdf => {
-      html2pdf.default().set(opt).from(element).save();
-    });
+    const h2p = window.html2pdf || html2pdf;
+    (h2p.default || h2p)().set(opt).from(element).save();
   };
 
   // --- CALCULATION LOGIC (Aggregated) ---

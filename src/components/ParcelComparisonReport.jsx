@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import html2pdfLib from 'html2pdf.js';
 import { formatNum } from '../utils/calculations';
 import { getPriceIdxByWeight } from '../utils/priceUtils';
 import { COLOUR_LIST, CLARITY_LIST, SIEVE_RANGES, MASTER_SIZE_CHART, isHotSize } from '../constants/diamondData';
@@ -198,7 +199,8 @@ const ParcelComparisonReport = ({ parcels, tender, prices, onBack }) => {
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
     };
-    html2pdf().set(opt).from(element).save();
+    const exporter = window.html2pdf || html2pdfLib?.default || html2pdfLib;
+    exporter().set(opt).from(element).save();
   };
 
   if (!showComparison) {
